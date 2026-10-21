@@ -8,18 +8,18 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💥</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@800&family=Orbitron:wght@900&display=swap" rel="stylesheet">
 <style>
   html,body{margin:0;height:100%;overflow:hidden;background:#05050a;cursor:none}
   #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;background:#070914}
   #scene,#fx{position:absolute;left:0;top:0;width:1920px;height:1080px;display:block}
-  .ov{position:absolute;inset:0;pointer-events:none;opacity:0}
+  .ov{position:absolute;inset:0;pointer-events:none;opacity:0;will-change:opacity}
   #vig{background:radial-gradient(ellipse at 50% 42%,transparent 35%,rgba(0,0,0,.9) 100%)}
   #alarm{background:radial-gradient(ellipse at 50% 42%,transparent 25%,rgba(255,10,0,.95) 110%)}
   #sirenL{background:radial-gradient(ellipse at 0% 62%,rgba(255,25,25,.95),transparent 50%)}
   #sirenR{background:radial-gradient(ellipse at 100% 62%,rgba(40,100,255,.95),transparent 50%)}
   #flash{background:#e8ecff}
-  #cd{position:absolute;left:0;top:900px;width:1920px;height:180px;display:flex;align-items:center;justify-content:center;
+  #cd{position:absolute;left:0;top:900px;will-change:opacity;width:1920px;height:180px;display:flex;align-items:center;justify-content:center;
       font:900 128px/1 'Orbitron',ui-monospace,Menlo,Consolas,monospace;color:var(--c,#dfe8ff);
       text-shadow:0 0 14px var(--g,rgba(223,232,255,.7)),0 0 48px var(--g,rgba(223,232,255,.5));user-select:none;
       transform-origin:50% 50%}
@@ -29,6 +29,12 @@
   @keyframes beat{0%{transform:scale(1.13)}100%{transform:scale(1)}}
   #cd.dead{animation:dead 1s steps(1) infinite}
   @keyframes dead{50%{opacity:.2}}
+  #say{position:absolute;left:0;top:0;will-change:opacity;padding:10px 28px 14px;background:#fbf6ea;color:#24160e;border:5px solid #24160e;border-radius:40px;
+       font:800 46px/1.15 'Noto Sans Georgian',system-ui,sans-serif;white-space:nowrap;pointer-events:none;opacity:0;box-shadow:0 8px 0 rgba(0,0,0,.35)}
+  #say::before,#say::after{content:'';position:absolute;left:var(--tx,50%);border-style:solid;border-color:transparent}
+  #say::before{bottom:-31px;margin-left:-17px;border-width:26px 17px 0;border-top-color:#24160e}
+  #say::after{bottom:-20px;margin-left:-12px;border-width:20px 12px 0;border-top-color:#fbf6ea}
+  #say.big{font-size:64px;color:#d81b60}
 </style>
 </head>
 <body>
@@ -77,7 +83,7 @@
     <g id="vultures"></g>
   </g>
 
-  <!-- ── world (the camera moves this) ── -->
+  <!-- ── world ── -->
   <g id="world">
     <g id="skyline"></g>
     <g id="tree" fill="none" stroke="#1a120c" stroke-linecap="round">
@@ -146,6 +152,7 @@
       <circle id="handL" r="17" fill="#eab08b" stroke="#a8714f" stroke-width="4"/>
       <circle id="handR" r="17" fill="#eab08b" stroke="#a8714f" stroke-width="4"/>
     </g>
+    <g id="guests"></g>
   </g>
 
   <!-- storm puffs in front of the tower top -->
@@ -168,6 +175,7 @@
 <div id="alarm" class="ov"></div>
 <div id="sirenL" class="ov"></div>
 <div id="sirenR" class="ov"></div>
+<div id="say"></div>
 <div id="cd"><i>0</i><i>0</i><b>:</b><i>0</i><i>0</i><b>:</b><i>0</i><i>0</i><b>:</b><i>0</i><i>0</i></div>
 <div id="flash" class="ov"></div>
 </div>
@@ -205,6 +213,8 @@ const rgb = h => hexCache[h] || (hexCache[h] = [1, 3, 5].map(i => parseInt(h.sli
 function mixA(a, b, t) { t = clamp(t, 0, 1); const A = rgb(a), B = rgb(b); return [0, 1, 2].map(i => Math.round(lerp(A[i], B[i], t))); }
 const mix = (a, b, t) => `rgb(${mixA(a, b, t).join(',')})`;
 const mix3 = (a, b, c, t) => t < 0.5 ? mix(a, b, t * 2) : mix(b, c, (t - 0.5) * 2);
+// set an attribute only when its value changes (even an unchanged write can make the browser repaint)
+function put(e, k, v) { const c = e.__a || (e.__a = {}); v = String(v); if (c[k] !== v) { c[k] = v; e.setAttribute(k, v); } }
 function emitN(rate, fn) { let n = Math.floor(rate); if (Math.random() < rate - n) n++; for (let i = 0; i < n; i++) fn(); }
 function R(g, x, y, w, h, rx, fill, stroke, sw) {
   const a = { x: f(x), y: f(y), width: f(w), height: f(h) };
@@ -214,7 +224,8 @@ function R(g, x, y, w, h, rx, fill, stroke, sw) {
 }
 
 // ───────────────────────── time / preview controls
-// Hidden preview: keys 0–9 = danger level, w = wide shot, z = 10 s before zero, r = real time, f = fullscreen.
+// Hidden preview: keys 0–9 = danger level, z = 10 s before zero, r = real time, f = fullscreen,
+// c = cat now (if it's already here: a meow), t = the cat's ტრაკიიიი show.
 // URL: ?d=0.7  |  ?t=15 (seconds before zero)  |  ?at=2026-11-10T12:00:00+04:00
 const qs = new URLSearchParams(location.search);
 let timeOffset = 0, dOverride = null;
@@ -240,7 +251,7 @@ function fit() {
   const w = fitW = innerWidth, h = fitH = innerHeight;
   fitS = Math.min(w / 1920, h / 1080);
   fitX = (w - 1920 * fitS) / 2; fitY = (h - 1080 * fitS) / 2;
-  rs = clamp(fitS * (devicePixelRatio || 1), 0.5, 1.5);
+  rs = clamp(fitS * (devicePixelRatio || 1), 0.5, 1);
   fx.width = Math.round(1920 * rs); fx.height = Math.round(1080 * rs);
 }
 addEventListener('resize', fit); fit();
@@ -516,7 +527,7 @@ const HOT = [ITEMS.find(i => i.type === 'cache'), ITEMS.find(i => i.type === 'co
 
 // ───────────────────────── night sky, city, gloom
 const starsG = $('stars'), STARS = [];
-for (let i = 0; i < 120; i++) STARS.push(el('circle', { cx: f(rand(0, 1920)), cy: f(rand(0, 640)), r: f(rand(0.7, 2.1)), opacity: f(rand(0.25, 1)) }, starsG));
+for (let i = 0; i < 70; i++) STARS.push(el('circle', { cx: f(rand(0, 1920)), cy: f(rand(0, 640)), r: f(rand(0.7, 2.1)), opacity: f(rand(0.25, 1)) }, starsG));
 
 const beamsG = $('beams');
 const BEAMS = [
@@ -534,11 +545,11 @@ function cloudShape(parent) {
 const cloudsG = $('clouds');
 const NCLOUDS = [
   { x: 420, y: 230, s: 1.3, v: 1 }, { x: 1180, y: 110, s: 1.0, v: 0.7 }, { x: 1520, y: 300, s: 1.4, v: 1.2 },
-  { x: 160, y: 420, s: 0.9, v: 0.6 }, { x: 860, y: 360, s: 1.1, v: 0.9 }, { x: 250, y: 120, s: 1.0, v: 0.8 }
+  { x: 860, y: 360, s: 1.1, v: 0.9 }
 ].map(c => ({ ...c, g: cloudShape(cloudsG) }));
 
 const batsG = $('bats');
-const BATS = [0, 1, 2, 3, 4, 5].map(() => ({ x: rand(0, 1920), y: rand(150, 560), v: rand(90, 180) * (Math.random() < 0.5 ? -1 : 1), ph: rand(0, 6), s: rand(0.8, 1.4), e: el('path', {}, batsG) }));
+const BATS = [0, 1, 2].map(() => ({ x: rand(0, 1920), y: rand(150, 560), v: rand(90, 180) * (Math.random() < 0.5 ? -1 : 1), ph: rand(0, 6), s: rand(0.8, 1.4), e: el('path', {}, batsG) }));
 
 const storm = $('storm'), stormFront = $('stormFront');
 const stormMain = el('g', {}, storm), stormUnder = el('g', {}, storm);
@@ -561,22 +572,22 @@ const VULTS = [0, 1, 2].map(i => {
   return { g, w, ph: i * 2.094 };
 });
 
-// city skyline (wide enough for the zoomed-out camera); windows are one path + some flickering ones
+// city skyline; windows are one path + some flickering ones
 const skyline = $('skyline');
 const farG = el('g', {}, skyline), nearG = el('g', {}, skyline), winG = el('g', {}, skyline), winPath = el('path', {}, winG);
 const WIN = [];
 {
-  let x = -2800, d = '';
-  while (x < 4800) { const w = rand(70, 150), top = rand(600, 720); el('rect', { x: f(x), y: f(top), width: f(w), height: f(905 - top) }, farG); x += w + rand(-10, 20); }
-  x = -2800;
-  while (x < 4800) {
+  let x = -200, d = '';
+  while (x < 2120) { const w = rand(70, 150), top = rand(600, 720); el('rect', { x: f(x), y: f(top), width: f(w), height: f(905 - top) }, farG); x += w + rand(-10, 20); }
+  x = -200;
+  while (x < 2120) {
     const w = rand(80, 170), top = rand(680, 800);
     el('rect', { x: f(x), y: f(top), width: f(w), height: f(905 - top) }, nearG);
     if (Math.random() < 0.3) { el('rect', { x: f(x + w / 2 - 2), y: f(top - 38), width: 4, height: 38 }, nearG); }
     for (let wx = x + 12; wx < x + w - 18; wx += 24)
       for (let wy = top + 14; wy < 860; wy += 30) {
         if (Math.random() < 0.45) continue;                       // lots of dark windows at night
-        if (WIN.length < 80 && wx > -200 && wx < 2100 && Math.random() < 0.3) WIN.push(el('rect', { x: f(wx), y: f(wy), width: 11, height: 15, rx: 1.5 }, winG));
+        if (WIN.length < 30 && wx > -200 && wx < 2100 && Math.random() < 0.3) WIN.push(el('rect', { x: f(wx), y: f(wy), width: 11, height: 15, rx: 1.5 }, winG));
         else d += `M${f(wx)} ${f(wy)}h11v15h-11z`;
       }
     x += w + rand(0, 25);
@@ -586,10 +597,10 @@ const WIN = [];
 
 const fogG = $('fog');
 const FOGS = [];
-for (let i = 0; i < 13; i++) FOGS.push({ x: -1700 + i * 430 + rand(-80, 80), y: rand(838, 878), rx: rand(320, 480), ry: rand(45, 75), v: rand(6, 16), e: el('ellipse', { fill: 'url(#fogG)' }, fogG) });
+for (let i = 0; i < 4; i++) FOGS.push({ x: -600 + i * 700 + rand(-60, 60), y: rand(838, 878), rx: rand(480, 680), ry: rand(45, 75), v: rand(6, 16), e: el('ellipse', { fill: 'url(#fogG)' }, fogG) });
 
 const weedsG = $('weeds'), WEEDS = [];
-for (let x = -700; x < 2700; x += rand(60, 150)) {
+for (let x = -40; x < 1960; x += rand(100, 220)) {
   if (x > 840 && x < 1080) continue;
   const g = el('g', {}, weedsG);
   for (let k = 0; k < 3; k++) {
@@ -616,7 +627,7 @@ const CRACKS = [
 }));
 
 // ───────────────────────── element refs
-const worldG = $('world'), heroG = $('hero'), handsG = $('hands'), bodyG = $('body'), headG = $('head');
+const heroG = $('hero'), handsG = $('hands'), bodyG = $('body'), headG = $('head');
 const armL = $('armL'), armR = $('armR'), armLo = $('armLo'), armRo = $('armRo');
 const legL = $('legL'), legR = $('legR'), shoeL = $('shoeL'), shoeR = $('shoeR');
 const handL = $('handL'), handR = $('handR'), faceTint = $('faceTint'), vein = $('vein'), veinS = $('veinS');
@@ -640,7 +651,7 @@ const SP = {
   fireR:  sprite(48, [[0, 'rgba(255,95,35,0.7)'], [0.5, 'rgba(180,30,10,0.35)'], [1, 'rgba(120,10,0,0)']])
 };
 const P = [], RAIN = [], BUGS = [];
-const add = p => { if (P.length < 2600) { p.life = 0; P.push(p); } };
+const add = p => { if (P.length < 700) { p.life = 0; P.push(p); } };
 
 function sparkBurst(x, y, n) {
   for (let i = 0; i < n; i++) { const a = rand(0, Math.PI * 2), s = rand(150, 650); add({ k: 'spark', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 200, max: rand(0.3, 0.7) }); }
@@ -665,6 +676,7 @@ function updateFx(dt) {
       case 'ember': p.vx += (wind * 0.3 - p.vx) * dt * 0.5; p.x += p.vx * dt + Math.sin(p.life * 3 + p.ph) * 0.7; p.y += p.vy * dt; break;
       case 'spark': p.vy += 1300 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.y > GROUND + 10) dead = true; break;
       case 'sweat': case 'crumb': p.vy += 1500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.y > GROUND) dead = true; break;
+      case 'heart': p.x += p.vx * dt + Math.sin(p.life * 6 + p.ph) * 0.8; p.y += p.vy * dt; break;
     }
     if (dead) { P[i] = P[P.length - 1]; P.pop(); }
   }
@@ -686,12 +698,16 @@ function drawBug(x, y, a, t) {
   ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(0, -5, 2.6, 0, 7); ctx.fill();
   ctx.restore();
 }
+function drawHeart(x, y, s) {
+  ctx.beginPath(); ctx.moveTo(x, y + s);
+  ctx.bezierCurveTo(x - s * 1.6, y - s * 0.2, x - s * 0.6, y - s * 1.3, x, y - s * 0.4);
+  ctx.bezierCurveTo(x + s * 0.6, y - s * 1.3, x + s * 1.6, y - s * 0.2, x, y + s);
+  ctx.fill();
+}
 function drawFx() {
-  const ws = rs * cam.s, wx = rs * (cam.ax - cam.cx * cam.s), wy = rs * (cam.ay - cam.cy * cam.s);
   ctx.setTransform(rs, 0, 0, rs, 0, 0);
   ctx.clearRect(0, 0, 1920, 1080);
   ctx.globalCompositeOperation = 'source-over';
-  ctx.setTransform(ws, 0, 0, ws, wx, wy);
   // shadows of things about to land
   ctx.fillStyle = '#000';
   for (const list of [DROPS, bodies || []]) for (const b of list) {
@@ -711,6 +727,7 @@ function drawFx() {
   for (const p of P) {
     if (p.k === 'sweat') { ctx.globalAlpha = Math.min(1, (p.max - p.life) * 3); drawDrop(p.x, p.y, Math.atan2(p.vy, p.vx)); }
     else if (p.k === 'crumb') { ctx.globalAlpha = 1; ctx.fillStyle = p.c; ctx.fillRect(p.x - 3, p.y - 3, 6, 6); }
+    else if (p.k === 'heart') { ctx.globalAlpha = Math.min(1, (p.max - p.life) * 2); ctx.fillStyle = '#ff4f8b'; drawHeart(p.x, p.y, p.r * Math.min(1, 0.4 + p.life * 3)); }
   }
   ctx.globalCompositeOperation = 'lighter';
   for (const p of P) {
@@ -725,8 +742,7 @@ function drawFx() {
       ctx.beginPath(); ctx.moveTo(p.x - p.vx * 0.02, p.y - p.vy * 0.02); ctx.lineTo(p.x, p.y); ctx.stroke();
     }
   }
-  // screen-space: rain + lightning
-  ctx.setTransform(rs, 0, 0, rs, 0, 0);
+  // rain + lightning
   ctx.globalCompositeOperation = 'source-over';
   if (RAIN.length) {
     ctx.globalAlpha = 0.42; ctx.strokeStyle = '#9fb0dd'; ctx.lineWidth = 2; ctx.beginPath();
@@ -755,37 +771,9 @@ let lastHL = { x: 825, y: 466 }, lastHR = { x: 1095, y: 466 };
 let shakeMag = 0, flashA = 0, stormFlick = 0, glitchT = 0, ghostT = 0, nextGlitch = 0, redFlash = 0, lampOff = 0;
 let nextEvt = 5, nextDrop = 4, ledT = 0, winT = 0, slowT = 0, fanSpd = 1, impacts = 0;
 let stormX = 900, stormY = -40;
-let towerTop = { x: 960, y: PIV.y - 18 - TOWER_H };
 let T = 0, D = 0;
 const DROPS = [];
 const shake = m => { shakeMag = Math.max(shakeMag, m); };
-
-// ───────────────────────── camera
-const cam = { s: 1, cx: 960, cy: GROUND, ax: 960, ay: GROUND };
-let camMode = 'close', camEnd = 0, nextWide = 9, faceCool = 6, camK = 1.3;
-function setCam(mode, dur) {
-  if (camMode === mode) { if (dur) camEnd = Math.max(camEnd, T + dur); return; }
-  const from = camMode;
-  camMode = mode; camEnd = T + (dur || 0);
-  camK = mode === 'face' ? 9 : mode === 'wide' ? 0.85 : mode === 'after' ? 0.7 : from === 'face' ? 4 : 1.3;
-}
-const WIDE_S = clamp(830 / (GROUND - (PIV.y - 18 - TOWER_H) + 60), 0.18, 1);
-function camTarget() {
-  switch (camMode) {
-    case 'face': return { s: 1.75, cx: 960 + slide, cy: 585 + curDy, ax: 960, ay: 470 };
-    case 'wide': return { s: WIDE_S, cx: 960, cy: GROUND, ax: 960, ay: GROUND };
-    case 'after': return { s: 0.58, cx: 960, cy: GROUND, ax: 960, ay: GROUND };
-    default: return { s: 1, cx: 960, cy: GROUND, ax: 960, ay: GROUND };
-  }
-}
-function updateCam(dt, snap) {
-  const t = camTarget(), k = snap ? 1 : 1 - Math.exp(-camK * dt);
-  for (const key in t) cam[key] += (t[key] - cam[key]) * k;
-  worldG.setAttribute('transform', `translate(${f(cam.ax)} ${f(cam.ay)}) scale(${cam.s.toFixed(4)}) translate(${f(-cam.cx)} ${f(-cam.cy)})`);
-}
-const toScreen = (x, y) => ({ x: cam.ax + (x - cam.cx) * cam.s, y: cam.ay + (y - cam.cy) * cam.s });
-const toWorldY = sy => cam.cy + (sy - cam.ay) / cam.s;
-const toWorldX = sx => cam.cx + (sx - cam.ax) / cam.s;
 
 // ───────────────────────── tower geometry
 function itemPt(it, lx = 0, ly = 0) {
@@ -805,7 +793,6 @@ function poseTower() {
     px = r.cx + ux * r.h / 2; py = r.cy + uy * r.h / 2;
     r.g.setAttribute('transform', `translate(${f(r.cx)} ${f(r.cy)}) rotate(${th.toFixed(2)})`);
   }
-  towerTop = { x: px, y: py };
   DUCK.dx = duckX;
   DUCK.el.setAttribute('transform', `translate(${f(DUCK.x + duckX)} ${f(DUCK.y)}) rotate(${(DUCK.a + duckX * 0.5).toFixed(2)})`);
 }
@@ -870,7 +857,7 @@ function spawnDrop() {
   LIVE = true;
   const left = Math.random() < 0.5;
   const x = left ? rand(330 + w / 2, 800 - w / 2) : rand(1120 + w / 2, 1590 - w / 2);
-  const y = toWorldY(-170) - h;
+  const y = -170 - h;
   const b = {
     el: g, type, x, y, a: rand(0, 360), w, h, hw: w / 2, hh: h / 2, vx: rand(-30, 30), vy: rand(250, 450), va: rand(-300, 300),
     ground: false, sup: null, tilt: rand(-15, 15), elec: ELEC.has(type), landed: 0, fade: 1,
@@ -883,11 +870,10 @@ function onDropImpact(b, v) {
   dustBurst(b.x, b.y + b.hh, b.hw, Math.round(12 + b.w / 18));
   if (b.elec) sparkBurst(b.x, b.y, 22);
   for (let i = 0; i < 10; i++) add({ k: 'crumb', x: b.x + rand(-b.hw, b.hw), y: b.y, vx: rand(-240, 240), vy: rand(-460, -150), c: pick(['#3b4757', '#9aa3b2', '#ffcf33', '#2c3340']), max: 2 });
-  shake(Math.min(28, v / 65) * (camMode === 'wide' ? 0.5 : 1));
+  shake(Math.min(28, v / 65));
   if (state !== 'calm') return;
   // he flinches
   dipV += 120; angV += rand(-25, 25); bendV += rand(-12, 12); sweatBurst(7);
-  if (camMode === 'close' && T > faceCool && TARGET - now() > 15000 && Math.random() < 0.5) { setCam('face', 2.4); faceCool = T + 20; }
 }
 function updateDrops(dt) {
   for (const b of DROPS) {
@@ -914,7 +900,6 @@ function fireEvent() {
     bendV += s * (35 + 55 * D); angV += s * (30 + 40 * D); slideV += s * (220 + 260 * D);
     dipV += 220; sweatBurst(14); shake(6 + 10 * D); redFlash = 1;
     for (const ph of PHONES) ph.ring = rand(1.5, 2.5);
-    if (camMode === 'close' && T > faceCool) { setCam('face', 2.2); faceCool = T + 20; }
   } else if (r < 0.45) {                // the tower lurches, he buckles
     angV += s * (22 + 75 * D); bendV += s * (12 + 30 * D);
     dipV += 70 + 140 * D; sweatBurst(3 + D * 9);
@@ -982,20 +967,20 @@ function updateCalm(dt) {
   // ambient emitters
   if (D < 0.6) emitN(2.2 * (1 - D) * dt, () => { const p = itemPt(MUG, -2, -28); add({ k: 'smoke', x: p.x + rand(-6, 6), y: p.y, vx: rand(-6, 6), vy: rand(-42, -25), r: 5, g: 11, a: 0.4, max: 2 }); });
   emitN((0.6 + D * 3) * dt, () => sweatBurst(1));
-  emitN((0.6 + smooth(0.3, 0.9, D) * 6) * dt, () => { const it = Math.random() < 0.5 ? pick(RACKS0) : pick(ITEMS), p = itemPt(it, rand(-it.w / 3, it.w / 3), -it.h / 2); add({ k: 'smoke', dark: true, x: p.x, y: p.y, vx: rand(-10, 10), vy: rand(-70, -40), r: 10, g: 22, a: 0.6, max: 3.5 }); });
-  for (const it of HOT) emitN(smooth(0.65, 1, D) * 22 * dt, () => { const p = itemPt(it, rand(-it.w / 2.5, it.w / 2.5), -it.h / 2 + 6); add({ k: 'fire', x: p.x, y: p.y, vx: rand(-15, 15), vy: rand(-140, -80), r: rand(10, 20), max: rand(0.4, 0.7) }); });
+  emitN((0.4 + smooth(0.3, 0.9, D) * 2.5) * dt, () => { const it = Math.random() < 0.5 ? pick(RACKS0) : pick(ITEMS), p = itemPt(it, rand(-it.w / 3, it.w / 3), -it.h / 2); add({ k: 'smoke', dark: true, x: p.x, y: p.y, vx: rand(-10, 10), vy: rand(-70, -40), r: 10, g: 22, a: 0.6, max: 3.5 }); });
+  for (const it of HOT) emitN(smooth(0.65, 1, D) * 10 * dt, () => { const p = itemPt(it, rand(-it.w / 2.5, it.w / 2.5), -it.h / 2 + 6); add({ k: 'fire', x: p.x, y: p.y, vx: rand(-15, 15), vy: rand(-140, -80), r: rand(10, 20), max: rand(0.4, 0.7) }); });
   emitN((0.15 + smooth(0.25, 1, D) * 1.3) * dt, () => { const p = itemPt(pick(SWITCHES), ...pick(CABLE_ENDS)); sparkBurst(p.x, p.y, 10); });
   // the pile smoulders, later burns
   for (const b of DROPS) {
     if (!b.ground || b.fade < 1) continue;
-    emitN(smooth(0.35, 1, D) * 0.9 * dt, () => add({ k: 'smoke', dark: true, x: b.x + rand(-b.hw * 0.4, b.hw * 0.4), y: b.y - b.hh, vx: rand(-8, 8), vy: rand(-60, -35), r: 12, g: 22, a: 0.5, max: 3.5 }));
-    if (b.fire) emitN(smooth(0.8, 1, D) * b.rate * 0.6 * dt, () => add({ k: 'fire', x: b.x + rand(-b.hw * 0.6, b.hw * 0.6), y: b.y - b.hh * 0.3, vx: rand(-20, 20), vy: rand(-150, -80), r: rand(12, 24) * b.fs, max: rand(0.4, 0.8) }));
+    emitN(smooth(0.35, 1, D) * 0.45 * dt, () => add({ k: 'smoke', dark: true, x: b.x + rand(-b.hw * 0.4, b.hw * 0.4), y: b.y - b.hh, vx: rand(-8, 8), vy: rand(-60, -35), r: 12, g: 22, a: 0.5, max: 3.5 }));
+    if (b.fire) emitN(smooth(0.8, 1, D) * b.rate * 0.3 * dt, () => add({ k: 'fire', x: b.x + rand(-b.hw * 0.6, b.hw * 0.6), y: b.y - b.hh * 0.3, vx: rand(-20, 20), vy: rand(-150, -80), r: rand(12, 24) * b.fs, max: rand(0.4, 0.8) }));
   }
   if (T > nextEvt) fireEvent();
   if (T > nextDrop) { spawnDrop(); nextDrop = T + lerp(10, 3.5, D) * rand(0.7, 1.3); }
 
   // bugs crawl up the tower
-  const nb = Math.round(3 + smooth(0.2, 1, D) * 16);
+  const nb = Math.round(2 + smooth(0.2, 1, D) * 7);
   while (BUGS.length < nb) BUGS.push({ r: rand(0.2, ROWG.length - 2), u: rand(-0.8, 0.8), sp: rand(0.25, 0.6), ph: rand(0, 6) });
   if (BUGS.length > nb) BUGS.length = nb;
   for (const b of BUGS) {
@@ -1006,14 +991,8 @@ function updateCalm(dt) {
     b.wx = row.cx + lx * Math.cos(t) - ly * Math.sin(t); b.wy = row.cy + lx * Math.sin(t) + ly * Math.cos(t); b.wa = t;
   }
 
-  // camera direction
-  const rem = TARGET - now();
-  if (rem < 3000) setCam('face');
-  else if (rem < 14000) setCam('wide');
-  else if ((camMode === 'face' || camMode === 'wide') && T > camEnd) { if (camMode === 'wide') nextWide = T + rand(20, 30); setCam('close'); }
-  else if (camMode === 'close' && T > nextWide) setCam('wide', rand(9, 12));
-
   // final minute: the ground starts to rumble
+  const rem = TARGET - now();
   if (rem < 60000) shake((1 - rem / 60000) * 7);
 }
 
@@ -1024,7 +1003,6 @@ function startCollapse() {
   faceTint.setAttribute('opacity', 0); vein.setAttribute('opacity', 0);
   BUGS.length = 0;
   for (const b of DROPS) b.ignite = rand(0.8, 3);
-  setCam('wide'); camK = 3;
   shake(6); flashA = Math.max(flashA, 0.3);
   nextGlitch = 7; nextDrop = T + 6;
 }
@@ -1058,12 +1036,12 @@ function onImpact(b, v) {
 function chaosEmit(dt) {
   for (const b of [...bodies, ...DROPS]) {
     if (!b.fire || cT < b.ignite || b.fade < 1) continue;
-    emitN(b.rate * dt, () => add({ k: 'fire', x: b.x + rand(-b.hw * 0.7, b.hw * 0.7), y: b.y - b.hh * 0.2 + rand(-b.hh * 0.4, b.hh * 0.3), vx: rand(-25, 25), vy: rand(-170, -90), r: rand(16, 30) * b.fs, max: rand(0.45, 0.9) }));
-    emitN(b.smoke * dt, () => add({ k: 'smoke', dark: true, x: b.x + rand(-b.hw * 0.4, b.hw * 0.4), y: b.y - b.hh - 10, vx: rand(-10, 10), vy: rand(-75, -40), r: rand(18, 28), g: rand(18, 30), a: 0.6, max: rand(4, 6) }));
+    emitN(b.rate * 0.55 * dt, () => add({ k: 'fire', x: b.x + rand(-b.hw * 0.7, b.hw * 0.7), y: b.y - b.hh * 0.2 + rand(-b.hh * 0.4, b.hh * 0.3), vx: rand(-25, 25), vy: rand(-170, -90), r: rand(20, 36) * b.fs, max: rand(0.45, 0.9) }));
+    emitN(b.smoke * 0.6 * dt, () => add({ k: 'smoke', dark: true, x: b.x + rand(-b.hw * 0.4, b.hw * 0.4), y: b.y - b.hh - 10, vx: rand(-10, 10), vy: rand(-75, -40), r: rand(18, 28), g: rand(18, 30), a: 0.6, max: rand(3, 4) }));
   }
-  emitN(26 * dt, () => { const [x, y] = pick(TREE_PTS); add({ k: 'fire', x: x + rand(-14, 14), y: y + rand(-10, 10), vx: rand(-20, 20), vy: rand(-150, -80), r: rand(14, 26), max: rand(0.45, 0.85) }); });
-  emitN(1.4 * dt, () => add({ k: 'smoke', dark: true, x: 1700 + rand(-60, 60), y: 560, vx: rand(-10, 10), vy: rand(-70, -40), r: 22, g: 26, a: 0.55, max: 5 }));
-  for (const gx of [-300, 230, 520, 1420, 1560, 2150]) emitN(9 * dt, () => add({ k: 'fire', x: gx + rand(-30, 30), y: GROUND - rand(0, 12), vx: rand(-15, 15), vy: rand(-130, -70), r: rand(12, 22), max: rand(0.4, 0.8) }));
+  emitN(12 * dt, () => { const [x, y] = pick(TREE_PTS); add({ k: 'fire', x: x + rand(-14, 14), y: y + rand(-10, 10), vx: rand(-20, 20), vy: rand(-150, -80), r: rand(18, 32), max: rand(0.45, 0.85) }); });
+  emitN(0.8 * dt, () => add({ k: 'smoke', dark: true, x: 1700 + rand(-60, 60), y: 560, vx: rand(-10, 10), vy: rand(-70, -40), r: 22, g: 26, a: 0.55, max: 5 }));
+  for (const gx of [-300, 230, 520, 1420, 1560, 2150]) emitN(4 * dt, () => add({ k: 'fire', x: gx + rand(-30, 30), y: GROUND - rand(0, 12), vx: rand(-15, 15), vy: rand(-130, -70), r: rand(16, 28), max: rand(0.4, 0.8) }));
   emitN(1 * dt, () => { const b = pick(bodies); if (b.elec) sparkBurst(b.x, b.y, 14); });
 }
 
@@ -1103,7 +1081,6 @@ function updateCollapse(dt) {
   }
   updateDrops(dt);
 
-  if (cT > 6.5) setCam('after');
   fanSpd *= Math.exp(-dt * 0.4);
   if (cT > 2.4) {
     chaosEmit(dt);
@@ -1122,17 +1099,13 @@ function resetCalm() {
   P.length = 0; glitchT = ghostT = 0; stage.style.filter = '';
   ghost.setAttribute('opacity', 0);
   cdEl.classList.remove('dead');
-  setCam('close'); nextWide = T + 8; nextDrop = T + 3;
+  nextDrop = T + 3;
 }
 
 // ───────────────────────── environment (night sky, storm, city, gloom, gadgets)
 function strike() {
   const left = Math.max(stormX + 150, 40);
-  let x0 = rand(left, 1880), y1 = rand(640, 860);
-  if (state === 'calm' && D > 0.7 && Math.random() < 0.35) {      // zap the top of the tower
-    const top = toScreen(towerTop.x, towerTop.y);
-    if (top.y > 40 && top.x > 0 && top.x < 1920) { x0 = top.x; y1 = top.y; sparkBurst(towerTop.x, towerTop.y, 26); duckV += rand(-220, 220); bendV += rand(-12, 12); }
-  }
+  const x0 = rand(left, 1880), y1 = rand(640, 860);
   const main = [[x0 + rand(-80, 80), stormY + 90]];
   let x = main[0][0], y = main[0][1];
   while (y < y1) { y = Math.min(y1, y + rand(22, 55)); x += rand(-36, 36) + (x0 - x) * 0.18; main.push([x, y]); }
@@ -1147,66 +1120,69 @@ function updateEnv(dt) {
   const chaos = state !== 'calm', DD = chaos ? 1 : D;
   wind = -(25 + 240 * D);
 
-  $('skyTop').setAttribute('stop-color', mix3('#070914', '#0d0817', '#0c0204', D));
-  $('skyBot').setAttribute('stop-color', mix3('#1b2342', '#2f1630', '#5e140b', D));
+  put($('skyTop'), 'stop-color', mix3('#070914', '#0d0817', '#0c0204', D));
+  put($('skyBot'), 'stop-color', mix3('#1b2342', '#2f1630', '#5e140b', D));
 
   // stars fade behind the storm, the moon turns blood red
-  starsG.setAttribute('opacity', (1 - smooth(0.2, 0.75, D)).toFixed(2));
-  for (let i = 0; i < 6; i++) pick(STARS).setAttribute('opacity', f(rand(0.15, 1)));
+  put(starsG, 'opacity', (1 - smooth(0.2, 0.75, D)).toFixed(2));
   const moonCol = mix('#e9edf5', '#b3241a', smooth(0.2, 0.9, D));
-  $('moonDisc').setAttribute('fill', moonCol);
-  $('moonGlowStop').setAttribute('stop-color', moonCol);
-  $('moon').setAttribute('transform', `translate(330 ${f(200 + smooth(0.6, 1, D) * 60)})`);
+  put($('moonDisc'), 'fill', moonCol);
+  put($('moonGlowStop'), 'stop-color', moonCol);
+  put($('moon'), 'transform', `translate(330 ${f(200 + smooth(0.6, 1, D) * 60)})`);
 
   // searchlights sweep the sky
-  $('beamStop').setAttribute('stop-color', mix('#c9d7ff', '#ff5a4a', smooth(0.5, 1, DD)));
-  beamsG.setAttribute('opacity', (0.6 + 0.35 * DD).toFixed(2));
-  for (const b of BEAMS) b.e.setAttribute('transform', `translate(${b.x} ${b.y}) rotate(${f(b.a0 + b.amp * Math.sin(T * b.sp * (1 + DD * 2.2) + b.ph))})`);
+  put($('beamStop'), 'stop-color', mix('#c9d7ff', '#ff5a4a', smooth(0.5, 1, DD)));
+  put(beamsG, 'opacity', (0.6 + 0.35 * DD).toFixed(2));
+  for (const b of BEAMS) put(b.e, 'transform', `translate(${b.x} ${b.y}) rotate(${f(b.a0 + b.amp * Math.sin(T * b.sp * (1 + DD * 2.2) + b.ph))})`);
 
-  cloudsG.setAttribute('fill', mix('#262838', '#1a1015', D));
-  cloudsG.setAttribute('opacity', 0.9);
+  put(cloudsG, 'fill', mix('#262838', '#1a1015', D));
+  put(cloudsG, 'opacity', 0.9);
   for (const c of NCLOUDS) {
     c.x -= (10 + 50 * D) * c.v * dt; if (c.x < -250) c.x += 2400;
-    c.g.setAttribute('transform', `translate(${f(c.x)} ${c.y}) scale(${c.s})`);
+    put(c.g, 'transform', `translate(${f(c.x)} ${c.y}) scale(${c.s})`);
   }
 
   for (const b of BATS) {
     b.x += b.v * dt * (1 + D); if (b.x < -80) b.x = 2000; if (b.x > 2000) b.x = -80;
     const fl = Math.sin(T * 16 + b.ph) * 8;
-    b.e.setAttribute('d', `M0 2 Q-8 -4 -14 ${f(-6 + fl)} Q-20 ${f(-4 + fl)} -28 ${f(-8 + fl)} Q-24 ${f(fl * 0.4)} -18 4 Q-12 2 -8 6 Q-4 2 0 6 Q4 2 8 6 Q12 2 18 4 Q24 ${f(fl * 0.4)} 28 ${f(-8 + fl)} Q20 ${f(-4 + fl)} 14 ${f(-6 + fl)} Q8 -4 0 2 Z`);
-    b.e.setAttribute('transform', `translate(${f(b.x)} ${f(b.y + Math.sin(T * 2 + b.ph) * 25 + Math.sin(T * 7 + b.ph) * 6)}) scale(${b.s * (b.v < 0 ? -1 : 1)} ${b.s})`);
+    put(b.e, 'd', `M0 2 Q-8 -4 -14 ${f(-6 + fl)} Q-20 ${f(-4 + fl)} -28 ${f(-8 + fl)} Q-24 ${f(fl * 0.4)} -18 4 Q-12 2 -8 6 Q-4 2 0 6 Q4 2 8 6 Q12 2 18 4 Q24 ${f(fl * 0.4)} 28 ${f(-8 + fl)} Q20 ${f(-4 + fl)} 14 ${f(-6 + fl)} Q8 -4 0 2 Z`);
+    put(b.e, 'transform', `translate(${f(b.x)} ${f(b.y + Math.sin(T * 2 + b.ph) * 25 + Math.sin(T * 7 + b.ph) * 6)}) scale(${b.s * (b.v < 0 ? -1 : 1)} ${b.s})`);
   }
-  vultG.setAttribute('opacity', (chaos ? 1 : smooth(0.5, 0.8, D)).toFixed(2));
+  put(vultG, 'opacity', (chaos ? 1 : smooth(0.5, 0.8, D)).toFixed(2));
   if (chaos || D > 0.45) for (const v of VULTS) {
     const a = T * 0.45 + v.ph, x = 960 + Math.cos(a) * 320, y = (chaos ? 320 : 150) + Math.sin(a) * 70;
     const wy = -8 * Math.sin(T * 3 + v.ph) - 4;
-    v.w.setAttribute('d', `M-36 ${f(wy)} Q-18 ${f(wy * 0.4 - 8)} 0 0 Q18 ${f(wy * 0.4 - 8)} 36 ${f(wy)}`);
-    v.g.setAttribute('transform', `translate(${f(x)} ${f(y)}) scale(${Math.sin(a) > 0 ? 1 : -1} 1)`);
+    put(v.w, 'd', `M-36 ${f(wy)} Q-18 ${f(wy * 0.4 - 8)} 0 0 Q18 ${f(wy * 0.4 - 8)} 36 ${f(wy)}`);
+    put(v.g, 'transform', `translate(${f(x)} ${f(y)}) scale(${Math.sin(a) > 0 ? 1 : -1} 1)`);
   }
 
   // city: power fails as it gets worse
-  farG.setAttribute('fill', mix('#151b2e', '#0d0a12', D));
-  nearG.setAttribute('fill', mix('#0b0f1c', '#060509', D));
-  winG.setAttribute('fill', mix('#ffd27a', '#ff4a32', smooth(0.4, 1, DD)));
-  winPath.setAttribute('opacity', (chaos ? 0.12 : lerp(0.8, 0.18, smooth(0.2, 1, D)) * (Math.random() < 0.004 + D * 0.03 ? 0.3 : 1)).toFixed(2));
+  put(farG, 'fill', mix('#151b2e', '#0d0a12', D));
+  put(nearG, 'fill', mix('#0b0f1c', '#060509', D));
+  put(winG, 'fill', mix('#ffd27a', '#ff4a32', smooth(0.4, 1, DD)));
   winT -= dt;
-  if (winT <= 0) { winT = 0.15; for (let i = 0; i < 8; i++) pick(WIN).setAttribute('opacity', Math.random() < 0.15 + DD * 0.6 ? 0.08 : 1); }
+  if (winT <= 0) {
+    winT = 1.2;
+    for (let i = 0; i < 4; i++) pick(WIN).setAttribute('opacity', Math.random() < 0.15 + DD * 0.6 ? 0.08 : 1);
+    for (let i = 0; i < 3; i++) pick(STARS).setAttribute('opacity', f(rand(0.15, 1)));
+    put(winPath, 'opacity', (chaos ? 0.12 : lerp(0.8, 0.18, smooth(0.2, 1, D)) * (Math.random() < 0.004 + D * 0.03 ? 0.3 : 1)).toFixed(2));
+  }
 
   // the storm (already here, and spreading)
   stormX = chaos ? 0 : (1 - smooth(0, 0.85, D)) * 900;
   stormY = lerp(-30, 30, D);
   const stT = `translate(${f(stormX)} ${f(stormY)})`;
-  storm.setAttribute('transform', stT); stormFront.setAttribute('transform', stT);
+  put(storm, 'transform', stT); put(stormFront, 'transform', stT);
   stormFlick -= dt;
   const under = stormFlick > 0 ? '#45425f' : mix('#17161e', '#0c090c', D);
-  stormMain.setAttribute('fill', stormFlick > 0 ? '#5a5680' : mix('#201f2a', '#140f14', D));
-  stormUnder.setAttribute('fill', under); stormFront.setAttribute('fill', under);
-  stormFront.setAttribute('opacity', (chaos ? 0.92 : smooth(0.35, 1, D) * 0.92).toFixed(2));
+  put(stormMain, 'fill', stormFlick > 0 ? '#5a5680' : mix('#201f2a', '#140f14', D));
+  put(stormUnder, 'fill', under); put(stormFront, 'fill', under);
+  put(stormFront, 'opacity', (chaos ? 0.92 : smooth(0.35, 1, D) * 0.92).toFixed(2));
   if (Math.random() < (chaos ? 1.4 : 0.35 + D * 1.0) * dt) stormFlick = rand(0.06, 0.14);
   if (Math.random() < (chaos ? 0.6 : 0.03 + (D > 0.3 ? (D - 0.3) * 0.9 : 0)) * dt) strike();
 
   // rain: drizzle now, downpour later
-  const rainN = chaos ? 650 : Math.round(110 + smooth(0.25, 1, D) * 520);
+  const rainN = chaos ? 260 : Math.round(60 + smooth(0.25, 1, D) * 200);
   while (RAIN.length < rainN) RAIN.push({ x: rand(-100, 2100), y: rand(-50, 900), vx: 0, vy: rand(1300, 1700) });
   if (RAIN.length > rainN) RAIN.length = rainN;
   for (const r of RAIN) {
@@ -1215,40 +1191,40 @@ function updateEnv(dt) {
   }
 
   // fog drifting along the ground
-  $('fogStop').setAttribute('stop-color', mix('#7d86a6', '#7a3a30', smooth(0.4, 1, DD)));
+  put($('fogStop'), 'stop-color', mix('#7d86a6', '#7a3a30', smooth(0.4, 1, DD)));
   for (const fg of FOGS) {
-    fg.x -= fg.v * dt * (1 + D * 3); if (fg.x < -2200) fg.x += 5600;
-    fg.e.setAttribute('cx', f(fg.x)); fg.e.setAttribute('cy', f(fg.y)); fg.e.setAttribute('rx', f(fg.rx)); fg.e.setAttribute('ry', f(fg.ry));
+    fg.x -= fg.v * dt * (1 + D * 3); if (fg.x < -700) fg.x += 2800;
+    put(fg.e, 'cx', f(fg.x)); put(fg.e, 'cy', f(fg.y)); put(fg.e, 'rx', f(fg.rx)); put(fg.e, 'ry', f(fg.ry));
   }
 
   // flickering street lamp
   lampOff -= dt;
   if (Math.random() < (chaos ? 2.5 : 0.25 + D * 2) * dt) lampOff = rand(0.05, chaos ? 1.5 : 0.35);
   const lampA = lampOff > 0 ? (Math.random() < 0.3 ? 0.4 : 0.03) : 1;
-  lampCone.setAttribute('opacity', lampA); lampPool.setAttribute('opacity', lampA);
-  lampBulb.setAttribute('fill', lampA > 0.5 ? '#ffe7a8' : '#3a3428');
-  heroPool.setAttribute('ry', f(24 + Math.sin(T * 3) * 1.5));
+  put(lampCone, 'opacity', lampA); put(lampPool, 'opacity', lampA);
+  put(lampBulb, 'fill', lampA > 0.5 ? '#ffe7a8' : '#3a3428');
+  put(heroPool, 'ry', f(24 + Math.sin(T * 3) * 1.5));
 
   // dead tree & weeds in the wind
-  $('tree').setAttribute('transform', `rotate(${(Math.sin(T * 1.3) * (0.8 + 3 * D) + Math.sin(T * 3.1) * D * 1.5 - D * 3).toFixed(2)} 1700 888)`);
-  WEEDS.forEach(w => w.g.setAttribute('transform', `rotate(${(Math.sin(T * 2 + w.ph) * (3 + 7 * D) - 4 - D * 12).toFixed(2)} ${f(w.x)} 888)`));
-  $('grass').setAttribute('fill', mix('#1c2b20', '#24190f', D));
-  $('grassTop').setAttribute('fill', mix('#25382a', '#2f2116', D));
+  put($('tree'), 'transform', `rotate(${(Math.sin(T * 1.3) * (0.8 + 3 * D) + Math.sin(T * 3.1) * D * 1.5 - D * 3).toFixed(2)} 1700 888)`);
+  WEEDS.forEach(w => put(w.g, 'transform', `rotate(${(Math.sin(T * 2 + w.ph) * (3 + 7 * D) - 4 - D * 12).toFixed(2)} ${f(w.x)} 888)`));
+  put($('grass'), 'fill', mix('#1c2b20', '#24190f', D));
+  put($('grassTop'), 'fill', mix('#25382a', '#2f2116', D));
 
   // embers drift up once things start burning
-  emitN((chaos ? 45 : smooth(0.45, 1, D) * 28) * dt, () => add({ k: 'ember', x: rand(toWorldX(0), toWorldX(1920)), y: GROUND + 10, vx: rand(-30, 30), vy: rand(-170, -60), r: rand(2.5, 5) / Math.max(0.5, cam.s), ph: rand(0, 6), max: rand(3, 6) }));
+  emitN((chaos ? 14 : smooth(0.45, 1, D) * 9) * dt, () => add({ k: 'ember', x: rand(0, 1920), y: GROUND + 10, vx: rand(-30, 30), vy: rand(-170, -60), r: rand(2.5, 5), ph: rand(0, 6), max: rand(3, 6) }));
 
   // the foundation cracks
-  $('crackGlow').setAttribute('opacity', (chaos ? 0.55 + 0.25 * Math.sin(T * 4) : smooth(0.75, 1, D) * 0.45).toFixed(2));
+  put($('crackGlow'), 'opacity', (chaos ? 0.55 + 0.25 * Math.sin(T * 4) : smooth(0.75, 1, D) * 0.45).toFixed(2));
   for (const c of CRACKS) {
     const off = (1 - (chaos ? 1 : smooth(c.a, c.b, D))).toFixed(3);
-    c.p.setAttribute('stroke-dashoffset', off); c.g.setAttribute('stroke-dashoffset', off);
+    put(c.p, 'stroke-dashoffset', off); put(c.g, 'stroke-dashoffset', off);
   }
 
   // gadgets: server lights, terminals, graphs, fans, queues, phones, battery, hourglass
   redFlash -= dt; ledT -= dt; slowT -= dt;
   if (ledT <= 0) {
-    ledT = 0.12;
+    ledT = 0.4;
     const pr = chaos ? 0.85 : 0.06 + 0.6 * D * D;
     for (const l of LEDS) {
       let c;
@@ -1256,32 +1232,32 @@ function updateEnv(dt) {
       else if (Math.random() < pr || (redFlash > 0 && Math.random() < 0.7)) c = '#ff3b30';
       else if (Math.random() < 0.05 + D * 0.2) c = '#ffb020';
       else c = '#3dff7a';
-      l.setAttribute('fill', c);
+      put(l, 'fill', c);
     }
-    for (const t of TERM) t.e.setAttribute('fill', Math.random() < (chaos ? 0.9 : 0.08 + D * 0.7) ? '#ff3b30' : t.c);
+    for (const t of TERM) put(t.e, 'fill', Math.random() < (chaos ? 0.9 : 0.08 + D * 0.7) ? '#ff3b30' : t.c);
   }
   if (slowT <= 0) {
     slowT = 0.35;
     const gc = mix3('#3dff7a', '#ffb020', '#ff3b30', DD);
-    for (const g of GRAPHS) { g.setAttribute('d', graphD(DD)); g.setAttribute('stroke', gc); }
+    for (const g of GRAPHS) { put(g, 'd', graphD(DD)); put(g, 'stroke', gc); }
     for (const hs of SANDS) setSand(hs, DD);
   }
-  for (const s of SPIN) { s.a = (s.a + dt * 360 * s.sp * (1.2 + 3 * D) * fanSpd) % 360; s.e.setAttribute('transform', `translate(${s.x} ${s.y}) rotate(${f(s.a)})`); }
+  for (const s of SPIN) { s.a = (s.a + dt * 360 * s.sp * (1.2 + 3 * D) * fanSpd) % 360; put(s.e, 'transform', `translate(${s.x} ${s.y}) rotate(${f(s.a)})`); }
   for (const q of QUEUES) {
     q.off += dt * 70 * (1 - 0.92 * D) * fanSpd;
-    q.envs.forEach((e, i) => e.setAttribute('transform', `translate(${f(((i * 36 + q.off) % 180) - 90)} 0)`));
+    q.envs.forEach((e, i) => put(e, 'transform', `translate(${f(((i * 36 + q.off) % 180) - 90)} 0)`));
   }
   if (!chaos && Math.random() < (0.04 + smooth(0.2, 1, D) * 0.3) * dt) pick(PHONES).ring = rand(1, 2);
   for (const ph of PHONES) {
     ph.ring -= dt;
     const on = ph.ring > 0, blink = (T * 8) % 1 < 0.5;
-    ph.k.setAttribute('transform', on ? `translate(${f(rand(-2.5, 2.5))} 0) rotate(${f(rand(-5, 5))})` : '');
-    ph.waves.setAttribute('opacity', on && blink ? 1 : 0);
-    ph.sc.setAttribute('fill', on ? (blink ? '#ff3b30' : '#ffd0cc') : chaos ? '#14161a' : '#3a7bd5');
+    put(ph.k, 'transform', on ? `translate(${f(rand(-2.5, 2.5))} 0) rotate(${f(rand(-5, 5))})` : '');
+    put(ph.waves, 'opacity', on && blink ? 1 : 0);
+    put(ph.sc, 'fill', on ? (blink ? '#ff3b30' : '#ffd0cc') : chaos ? '#14161a' : '#3a7bd5');
   }
   const lvl = chaos ? 0 : clamp(Math.ceil((1 - D) * 4 - 1e-4), 1, 4);
   const bc = lvl >= 3 ? '#3ddc6a' : lvl === 2 ? '#ffb020' : (T * 3) % 1 < 0.5 ? '#ff3b30' : '#ffd0cc';
-  UPSB.forEach((b, i) => b.setAttribute('fill', i < lvl ? bc : '#e8ebf0'));
+  UPSB.forEach((b, i) => put(b, 'fill', i < lvl ? bc : '#e8ebf0'));
 
   // overlays: gloom, alarm, emergency lights
   vigEl.style.opacity = (chaos ? 0.97 : 0.6 + smooth(0.2, 1, D) * 0.35).toFixed(3);
@@ -1293,9 +1269,199 @@ function updateEnv(dt) {
   if (ghostT > 0) {
     ghostT -= dt;
     const g = 1 - ghostT / 1.4;
-    ghost.setAttribute('opacity', (Math.max(0, Math.sin(g * Math.PI)) * 0.34 * (Math.random() < 0.85 ? 1 : 0.35)).toFixed(3));
-    ghost.setAttribute('transform', `translate(${f(960 + rand(-6, 6))} 300) scale(2.3)`);
-  } else ghost.setAttribute('opacity', 0);
+    put(ghost, 'opacity', (Math.max(0, Math.sin(g * Math.PI)) * 0.34 * (Math.random() < 0.85 ? 1 : 0.35)).toFixed(3));
+    put(ghost, 'transform', `translate(${f(960 + rand(-6, 6))} 300) scale(2.3)`);
+  } else put(ghost, 'opacity', 0);
+}
+
+// ───────────────────────── guests: someone wanders through for 5 min, then nobody for 5 min
+// For now the only guest is the cat, with niko.jpg as its head (embedded below, like the hero's face).
+const VISIT = [300, 300], AWAY = [300, 300];
+const TRAKI_CHANCE = 1 / 3;   // share of cat visits that end with the bubble-butt show
+const guestsG = $('guests'), sayEl = $('say');
+let clipN = 0;
+// head slot: a face photo in a round furry frame; zoom + fx/fy (face center as a fraction of the photo) crop it onto the face
+function faceHead(g, { src, zoom = 1, fx = 0.5, fy = 0.5 }, r, fur, line) {
+  el('circle', { r: r + 7, fill: fur, stroke: line, 'stroke-width': 4 }, g);
+  const id = 'guestClip' + ++clipN;
+  el('circle', { r }, el('clipPath', { id }, g));
+  const fb = el('g', {}, g);
+  for (const s of [-1, 1]) el('ellipse', { cx: s * 18, cy: -8, rx: 6, ry: 9, fill: '#1d1410' }, fb);
+  el('path', { d: 'M-7 10H7L0 18Z', fill: '#f29aa0' }, fb);
+  el('path', { d: 'M-13 24Q-6 31 0 22Q6 31 13 24', fill: 'none', stroke: '#1d1410', 'stroke-width': 3, 'stroke-linecap': 'round' }, fb);
+  const S = r * 2 * zoom;
+  const im = el('image', { href: src, x: f(-fx * S), y: f(-fy * S), width: f(S), height: f(S), preserveAspectRatio: 'xMidYMid slice', 'clip-path': `url(#${id})` }, g);
+  const probe = new Image();
+  probe.onload = () => fb.remove(); probe.onerror = () => im.remove();
+  probe.src = src;
+}
+// where guests roam (on screen)
+const ROAM = [180, 1740];
+
+// speech bubble (an HTML layer above the vignette, so it stays crisp)
+let sayT = 0, sayMax = 0, sayW = 0, sayH = 0, sayBy = null;
+function say(who, text, dur, big) {
+  sayEl.textContent = text; sayEl.classList.toggle('big', !!big);
+  sayW = sayEl.offsetWidth; sayH = sayEl.offsetHeight; sayT = sayMax = dur; sayBy = who;
+}
+function updateSay(dt) {
+  if (sayT <= 0) return;
+  sayT -= dt;
+  const u = clamp((sayMax - sayT) / 0.25, 0, 1) - 1;
+  const k = (1 + 2.7 * u * u * u + 1.7 * u * u) * smooth(0, 0.2, sayT);   // pops in with a little overshoot, shrinks away at the end
+  const s = sayBy.top();
+  const left = clamp(s.x - sayW / 2, 16, 1904 - sayW), tx = clamp(s.x - left, 34, sayW - 34);
+  sayEl.style.left = `${f(left)}px`; sayEl.style.top = `${f(s.y - sayH - 26)}px`;
+  sayEl.style.setProperty('--tx', `${f(tx)}px`);
+  sayEl.style.transformOrigin = `${f(tx)}px ${sayH + 26}px`;
+  sayEl.style.transform = `scale(${Math.max(0, k).toFixed(3)})`;
+  sayEl.style.opacity = sayT > 0 ? 1 : 0;
+}
+
+function makeCat(face) {
+  const FUR = '#e8913f', FAR = '#c06c2a', LINE = '#5a2f12', STRIPE = '#b65a1e', PINK = '#f29aa0';
+  const g = el('g', {}, guestsG);
+  g.style.display = 'none';
+  const side = el('g', {}, g), rear = el('g', {}, g), hd = el('g', {}, g);
+  const round = { fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+  const limb = (p, c, w = 13) => [el('path', { ...round, stroke: LINE, 'stroke-width': w + 8 }, p), el('path', { ...round, stroke: c, 'stroke-width': w }, p)];
+  const tailOf = p => [...limb(p, FUR, 14), el('path', { fill: 'none', stroke: STRIPE, 'stroke-width': 14, 'stroke-dasharray': '7 12' }, p)];
+  const setD = (L, d) => { for (const e of L) e.setAttribute('d', d); };
+  const blob = (p, shapes) => { for (const [c, w] of [[LINE, 8], [FUR, 0]]) for (const [tag, a] of shapes) el(tag, { ...a, fill: c, stroke: c, 'stroke-width': w }, p); };
+
+  // side view (faces +x, paws on y=0), the bubble butt trailing behind
+  const sb = el('g', {}, side);
+  const leg = (x, y, o, k, c) => ({ x, y, o, k, L: limb(sb, c) });
+  const legs = [leg(-62, -64, Math.PI, -9, FAR), leg(40, -72, 0, 3, FAR)];
+  const sTail = tailOf(sb);
+  blob(sb, [['circle', { cx: -56, cy: -84, r: 52 }], ['ellipse', { cx: 4, cy: -86, rx: 64, ry: 30 }], ['circle', { cx: 52, cy: -92, r: 30 }]]);
+  el('path', { d: 'M-6 -114q5 10 0 20M16 -115q5 10 0 20M38 -111q4 9 0 17M-66 -130q17 8 16 27M-90 -114q14 8 14 24', ...round, stroke: STRIPE, 'stroke-width': 6 }, sb);
+  el('ellipse', { cx: -76, cy: -112, rx: 17, ry: 9, transform: 'rotate(-35 -76 -112)', fill: '#fff', opacity: 0.35 }, sb);
+  legs.push(leg(-44, -64, 0, -9, FUR), leg(58, -72, Math.PI, 3, FUR));
+
+  // rear view, for the show: two big cheeks
+  const rb = el('g', {}, rear);
+  for (const s of [-1, 1]) setD(limb(rb, FUR), `M${s * 46} -44L${s * 50} -10`);
+  blob(rb, [['ellipse', { cx: 0, cy: -116, rx: 48, ry: 46 }]]);
+  el('path', { d: 'M-30 -142q30 -8 60 0M-38 -124q38 -9 76 0', ...round, stroke: STRIPE, 'stroke-width': 6 }, rb);
+  const cheeks = [-1, 1].map(s => {
+    const ch = el('g', {}, rb);
+    el('circle', { cx: s * 37, cy: -64, r: 46, fill: FUR, stroke: LINE, 'stroke-width': 5 }, ch);
+    el('ellipse', { cx: s * 37 - 14, cy: -86, rx: 13, ry: 8, transform: `rotate(-25 ${s * 37 - 14} -86)`, fill: '#fff', opacity: 0.4 }, ch);
+    return ch;
+  });
+  const rTail = tailOf(rb);
+
+  // head: ears, face slot, whiskers
+  for (const s of [-1, 1]) {
+    el('path', { d: `M${s * 50} -20L${s * 44} -90L${s * 6} -58Z`, fill: FUR, stroke: LINE, 'stroke-width': 5, 'stroke-linejoin': 'round' }, hd);
+    el('path', { d: `M${s * 41} -36L${s * 39} -76L${s * 18} -58Z`, fill: PINK }, hd);
+  }
+  faceHead(hd, face, 52, FUR, LINE);
+  el('path', { d: 'M-48 10L-84 2M-48 18L-86 20M-48 26L-82 36M48 10L84 2M48 18L86 20M48 26L82 36', ...round, stroke: '#f3ece0', 'stroke-width': 3 }, hd);
+
+  // modes: away → walk ⇄ idle → (walk to a spot → show) → exit → away
+  const c = { x: 0, y: GROUND - 2, dir: 1, mode: 'away', pose: 'side', tx: 0, ph: 0, amp: 0, until: 0, leave: 0, meowAt: 0,
+              traki: false, show: false, said: false, sT: 0, tw: 0, turn: 0, mid: null, hx: 0, hy: 0 };
+  const setPose = p => { c.pose = p; side.style.display = p === 'side' ? '' : 'none'; rear.style.display = p === 'rear' ? '' : 'none'; };
+  const turn = fn => { c.turn = 0.26; c.mid = fn; };   // squash to nothing, flip at the midpoint, stretch back
+  const go = tx => { c.tx = tx; c.mode = 'walk'; };
+  const exit = (out = Math.random() < 0.5 ? -1 : 1) => { c.mode = 'exit'; c.show = false; c.tx = c.x + out * 1e5; };
+  function wander() {
+    if (T < c.leave) { const [lo, hi] = ROAM; let tx; do tx = rand(lo, hi); while (Math.abs(tx - c.x) < 220); go(tx); }
+    else if (c.traki) { c.traki = false; c.show = true; go(960 + (c.x < 960 ? -1 : 1) * rand(260, 420)); }
+    else exit();
+  }
+  function arrive() {
+    if (c.show) { c.mode = 'show'; c.sT = 0; c.said = false; turn(() => setPose('rear')); return; }
+    if (T > c.leave) return wander();
+    c.mode = 'idle'; c.until = T + rand(2.5, 7);
+    if (Math.random() < 0.6) c.meowAt = Math.min(c.meowAt, T + rand(0.3, 1.5));
+  }
+  setPose('side');
+
+  c.enter = (traki = Math.random() < TRAKI_CHANCE, stay = rand(...VISIT)) => {
+    const fromL = Math.random() < 0.5, [lo, hi] = ROAM;
+    c.dir = fromL ? 1 : -1; c.x = fromL ? -170 : 2090; c.ph = c.amp = c.turn = 0;
+    c.traki = traki; c.show = false; c.leave = T + stay; c.meowAt = T + rand(4, 8);
+    setPose('side'); go(lerp(lo, hi, fromL ? rand(0.15, 0.4) : rand(0.6, 0.85)));
+    g.style.display = '';
+  };
+  c.shoo = () => { if (c.mode === 'walk' || c.mode === 'idle') exit(); };
+  c.meow = () => say(c, 'მიაუ მიაუ', 2.2);
+  c.top = () => ({ x: c.x + c.hx, y: c.y + c.hy - 98 });
+  c.update = dt => {
+    if (c.mode === 'away') return false;
+    let moved = 0;
+    if (c.turn > 0) { const was = c.turn; c.turn -= dt; if (was > 0.13 && c.turn <= 0.13) c.mid(); }
+    else if (c.mode === 'walk' || c.mode === 'exit') {
+      const want = Math.sign(c.tx - c.x) || c.dir;
+      if (want !== c.dir) turn(() => { c.dir = want; });
+      else {
+        moved = Math.min(Math.abs(c.tx - c.x), (c.mode === 'exit' ? 170 : 115) * dt);
+        c.x += c.dir * moved; c.ph += moved / 20;
+        if (c.mode === 'walk' && Math.abs(c.tx - c.x) < 0.5) arrive();
+      }
+    } else if (c.mode === 'idle') { if (T > c.until) wander(); }
+    else if (c.mode === 'show') {
+      c.sT += dt;
+      if (c.sT > 0.35 && !c.said) { c.said = true; say(c, 'ტრაკიიიი', 3.6, true); }
+      if (c.tw > 0.4) emitN(7 * dt, () => add({ k: 'heart', x: c.x + rand(-70, 70), y: c.y - rand(60, 110), vx: rand(-40, 40), vy: rand(-110, -60), r: rand(8, 13), ph: rand(0, 6), max: rand(1.2, 1.8) }));
+      if (c.sT > 4.4) { const out = Math.random() < 0.5 ? -1 : 1; turn(() => { setPose('side'); c.dir = out; }); exit(out); }
+    }
+    if (c.mode === 'exit') {
+      if ((c.x < -260 && c.dir < 0) || (c.x > 2180 && c.dir > 0)) { c.mode = 'away'; g.style.display = 'none'; return false; }
+    }
+    if (T > c.meowAt && c.pose === 'side' && c.mode !== 'show') { c.meow(); c.meowAt = T + rand(8, 20); }
+    c.tw = c.mode === 'show' ? smooth(0.3, 0.7, c.sT) * (1 - smooth(3.8, 4.3, c.sT)) : 0;
+    draw(dt, moved);
+    return true;
+  };
+  function draw(dt, moved) {
+    c.amp += ((moved > 0 ? 1 : 0) - c.amp) * Math.min(1, dt * 8);
+    const sq = c.turn > 0 ? Math.max(0.04, Math.abs(c.turn - 0.13) / 0.13) : 1, sx = c.dir * sq;
+    g.setAttribute('transform', `translate(${f(c.x)} ${f(c.y)})`);
+    let rot = 0;
+    if (c.pose === 'side') {
+      const bob = -Math.abs(Math.sin(c.ph)) * 3 * c.amp;
+      side.setAttribute('transform', `scale(${sx.toFixed(3)} 1)`);
+      sb.setAttribute('transform', `translate(0 ${f(bob)})`);
+      for (const l of legs) {   // trot: diagonal pairs swing together
+        const a = c.ph + l.o, px = l.x + Math.sin(a) * 18 * c.amp, py = -10 - Math.max(0, Math.cos(a)) * 12 * c.amp;
+        setD(l.L, `M${l.x} ${l.y}L${f((l.x + px) / 2 + l.k)} ${f((l.y + py) / 2)}L${f(px)} ${f(py)}`);
+      }
+      const sw = Math.sin(T * 2.3) * 10 + Math.sin(c.ph * 2) * 4 * c.amp;
+      setD(sTail, `M-98 -104C-130 -108 ${f(-144 + sw * 0.4)} -146 ${f(-122 + sw)} -192`);
+      c.hx = 80 * sx; c.hy = -150 + bob;
+    } else {
+      const k = c.tw, b = Math.sin(T * 17) * k;   // twerk: the cheeks bounce in turn, the hips sway
+      rear.setAttribute('transform', `scale(${sx.toFixed(3)} 1)`);
+      cheeks[0].setAttribute('transform', `translate(0 ${f(b * 10)})`);
+      cheeks[1].setAttribute('transform', `translate(0 ${f(-b * 10)})`);
+      rb.setAttribute('transform', `translate(${f(Math.sin(T * 8.5) * 7 * k)} ${f(-Math.abs(b) * 4)}) rotate(${f(b * 4)} 0 -60)`);
+      const w = Math.sin(T * 9) * (8 + 14 * k);
+      setD(rTail, `M0 -100C8 -140 ${f(58 + w)} -132 ${f(64 + w * 1.3)} -176`);
+      c.hx = -40 * sx; c.hy = -192 - Math.abs(b) * 4; rot = (-8 + b * 3) * c.dir;   // looks back over the shoulder
+    }
+    hd.setAttribute('transform', `translate(${f(c.hx)} ${f(c.hy)}) rotate(${f(rot)}) scale(${sq.toFixed(3)} 1)`);
+  }
+  return c;
+}
+
+const NIKO = 'data:image/jpeg;base64,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';   // niko.jpg
+const CAT = makeCat({ src: NIKO, zoom: 1.45, fx: 0.51, fy: 0.41 }), GUESTS = [CAT];
+let guest = null, nextGuest = rand(30, 90);
+function updateGuests(dt, rem) {
+  const quiet = rem < 600000 && rem > -60000;   // the last 10 min and the collapse belong to the hero
+  if (guest) {
+    if (quiet && rem < 90000) guest.shoo();
+    if (!guest.update(dt)) { guest = null; nextGuest = T + rand(...AWAY); }
+  } else if (T > nextGuest && !quiet) (guest = pick(GUESTS)).enter();
+  updateSay(dt);
+}
+function summon(traki) {
+  if (!guest) { guest = CAT; CAT.enter(traki || Math.random() < TRAKI_CHANCE, traki ? 0 : rand(...VISIT)); }
+  else if (guest === CAT) { if (traki) { CAT.traki = true; CAT.leave = 0; } else CAT.meow(); }
 }
 
 // ───────────────────────── countdown
@@ -1342,7 +1508,7 @@ function step(dt) {
   D += (dT - D) * Math.min(1, dt * 1.5);
   updateEnv(dt);
   if (state === 'calm') { updateCalm(dt); updateDrops(dt); } else updateCollapse(dt);
-  updateCam(dt);
+  updateGuests(dt, rem);
   updateFx(dt);
   return rem;
 }
@@ -1352,9 +1518,8 @@ if (TARGET - now() <= 0) {
   // Already past zero on load: fast-forward straight into the aftermath.
   D = 1; startCollapse();
   for (let i = 0; i < 720; i++) step(1 / 60);
-  updateCam(0, true);
   P.length = 0; shakeMag = flashA = glitchT = ghostT = 0; nextGlitch = cT + 4;
-} else { step(0); updateCam(0, true); }   // pose everything before the first paint
+} else step(0);   // pose everything before the first paint
 updateCountdown(TARGET - now());
 
 let last = performance.now();
@@ -1378,10 +1543,11 @@ function toggleFS() {
 }
 addEventListener('keydown', e => {
   if (e.key >= '0' && e.key <= '9') { dOverride = +e.key / 9; timeOffset = 0; }
-  else if (e.key === 'w') { if (state === 'calm') setCam('wide', 10); }
   else if (e.key === 'z') { dOverride = null; timeOffset = TARGET - 10500 - Date.now(); }
   else if (e.key === 'r') { dOverride = null; timeOffset = 0; }
   else if (e.key === 'f') toggleFS();
+  else if (e.key === 'c') summon(false);
+  else if (e.key === 't') summon(true);
 });
 addEventListener('dblclick', toggleFS);
 async function wake() { try { if ('wakeLock' in navigator) await navigator.wakeLock.request('screen'); } catch (_) {} }
