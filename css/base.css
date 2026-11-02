@@ -1,0 +1,10 @@
+/* page, 1920×1080 stage, full-screen overlays */
+html,body{margin:0;height:100%;overflow:hidden;background:#05050a;cursor:none}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;background:#070914}
+#scene,#fx{position:absolute;left:0;top:0;width:1920px;height:1080px;display:block}
+.ov{position:absolute;inset:0;pointer-events:none;opacity:0;will-change:opacity}
+#vig{background:radial-gradient(ellipse at 50% 42%,transparent 35%,rgba(0,0,0,.9) 100%)}
+#alarm{background:radial-gradient(ellipse at 50% 42%,transparent 25%,rgba(255,10,0,.95) 110%)}
+#sirenL{background:radial-gradient(ellipse at 0% 62%,rgba(255,25,25,.95),transparent 50%)}
+#sirenR{background:radial-gradient(ellipse at 100% 62%,rgba(40,100,255,.95),transparent 50%)}
+#flash{background:#e8ecff}

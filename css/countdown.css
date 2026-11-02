@@ -1,0 +1,11 @@
+/* countdown in the foundation band */
+#cd{position:absolute;left:0;top:900px;will-change:opacity;width:1920px;height:180px;display:flex;align-items:center;justify-content:center;
+    font:900 128px/1 'Orbitron',ui-monospace,Menlo,Consolas,monospace;color:var(--c,#dfe8ff);
+    text-shadow:0 0 14px var(--g,rgba(223,232,255,.7)),0 0 48px var(--g,rgba(223,232,255,.5));user-select:none;
+    transform-origin:50% 50%}
+#cd i{display:inline-block;width:.8em;text-align:center;font-style:normal}
+#cd b{display:inline-block;width:.42em;text-align:center;transform:translateY(-.05em)}
+#cd.beat{animation:beat .9s ease-out}
+@keyframes beat{0%{transform:scale(1.13)}100%{transform:scale(1)}}
+#cd.dead{animation:dead 1s steps(1) infinite}
+@keyframes dead{50%{opacity:.2}}
