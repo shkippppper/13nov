@@ -1,0 +1,8 @@
+/* speech bubbles: #say (guests), #say2 (cxaduri) */
+.say{position:absolute;left:0;top:0;will-change:opacity;padding:10px 28px 14px;background:#fbf6ea;color:#24160e;border:5px solid #24160e;border-radius:40px;
+     font:800 46px/1.15 'Noto Sans Georgian',system-ui,sans-serif;white-space:nowrap;pointer-events:none;opacity:0;box-shadow:0 8px 0 rgba(0,0,0,.35)}
+.say::before,.say::after{content:'';position:absolute;left:var(--tx,50%);border-style:solid;border-color:transparent}
+.say::before{bottom:-31px;margin-left:-17px;border-width:26px 17px 0;border-top-color:#24160e}
+.say::after{bottom:-20px;margin-left:-12px;border-width:20px 12px 0;border-top-color:#fbf6ea}
+#say2{white-space:normal;width:max-content;max-width:860px;text-align:center}
+.say.big{font-size:64px;color:#d81b60}
