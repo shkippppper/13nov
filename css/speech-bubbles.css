@@ -1,4 +1,4 @@
-/* speech bubbles: #say (guests), #say2 (cxaduri) */
+/* speech bubbles: #say (guests), #say2 (cxaduri), #say3 (io) */
 .say{position:absolute;left:0;top:0;will-change:opacity;padding:10px 28px 14px;background:#fbf6ea;color:#24160e;border:5px solid #24160e;border-radius:40px;
      font:800 46px/1.15 'Noto Sans Georgian',system-ui,sans-serif;white-space:nowrap;pointer-events:none;opacity:0;box-shadow:0 8px 0 rgba(0,0,0,.35)}
 .say::before,.say::after{content:'';position:absolute;left:var(--tx,50%);border-style:solid;border-color:transparent}

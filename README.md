@@ -13,7 +13,7 @@ js/tower/               item drawings, the tower, its geometry, junk falling fro
 js/hero/                calm phase, foreshadowing events, collapse
 js/scene/               night sky & city, environment (storm, gloom, gadgets), countdown, shake/flash
 js/fx/                  canvas particles (sparks, dust, smoke, rain, hearts)
-js/features/            self-contained extras: guests (the cat), cxaduri peeking in
+js/features/            self-contained extras: guests (the cat), cxaduri peeking in, io popping up
 js/main.js              the frame loop
 js/controls.js          keyboard, fullscreen, keep-awake
 assets/images/          images used by the page; assets/images/source/ holds originals that aren't loaded
@@ -44,10 +44,10 @@ The scripts are plain `<script>` files that share one scope, so later files can 
 A new **guest** (someone who wanders in like the cat) goes in `js/features/guests/` and joins the rotation with
 `GUESTS.push(myGuest)` — see `cat.js` for the shape a guest needs.
 
-Handy helpers: `el(tag, attrs, parent)` makes SVG elements, `rand`, `pick`, `lerp`, `clamp`, `smooth`, `say(who, text, secs)`
+Handy helpers: `el(tag, attrs, parent)` makes SVG elements, `rand`, `pick`, `lerp`, `clamp`, `smooth`, `backOut`, `smoothClosed(points)` (outline → smooth path), `say(who, text, secs)`
 for a guest speech bubble, `add({...})` for a particle. `T` is seconds since load, `D` is danger 0…1.
 
 ## Keys
 
 `0`–`9` preview danger level · `z` jump to 10 s before zero · `r` back to real time · `f` / double-click fullscreen ·
-`c` call the cat · `t` cat's show · `x` cxaduri peeks in
+`c` call the cat · `t` cat's show · `x` cxaduri peeks in · `i` io pops up

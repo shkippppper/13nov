@@ -26,7 +26,6 @@ const PEEK_LINES = [
   'წივილა ჩემი გაზრდილია',
   'ცხადია!',
 ];
-const backOut = x => 1 + 2.70158 * (x - 1) ** 3 + 1.70158 * (x - 1) ** 2;
 function makePeek(src, lines) {
   const root = $('peek');
   const side = el('g', {}, root);   // drawn for the left edge, mirrored for the right one
@@ -37,13 +36,7 @@ function makePeek(src, lines) {
   // (crop 518×860, shown 250 wide with the nose bridge at 0,0), smoothed into a closed curve.
   const PS = 250 / 518, OUTLINE = [[200, -15], [320, 12], [385, 70], [418, 180], [440, 285], [498, 362], [506, 420], [478, 480], [468, 570],
     [455, 660], [425, 740], [360, 790], [280, 812], [180, 798], [60, 745], [-30, 600], [-40, 300], [30, 40]].map(([x, y]) => [(x - 300) * PS, (y - 430) * PS]);
-  const n = OUTLINE.length, pt = i => OUTLINE[(i + n) % n];
-  let headD = `M${OUTLINE[0].map(f)}`;
-  for (let i = 0; i < n; i++) {   // Catmull-Rom → cubic Béziers
-    const [a, b, c, e] = [pt(i - 1), pt(i), pt(i + 1), pt(i + 2)];
-    headD += `C${f(b[0] + (c[0] - a[0]) / 6)} ${f(b[1] + (c[1] - a[1]) / 6)} ${f(c[0] - (e[0] - b[0]) / 6)} ${f(c[1] - (e[1] - b[1]) / 6)} ${f(c[0])} ${f(c[1])}`;
-  }
-  headD += 'Z';
+  const headD = smoothClosed(OUTLINE);
   el('path', { d: headD, fill: '#2b1d16' }, hd);
   el('path', { d: headD }, el('clipPath', { id: 'peekClip' }, hd));
   el('image', { href: src, x: -145, y: -208, width: 250, height: 415, preserveAspectRatio: 'none', 'clip-path': 'url(#peekClip)' }, hd);
