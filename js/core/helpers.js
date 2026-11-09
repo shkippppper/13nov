@@ -15,6 +15,17 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const f = v => v.toFixed(1);
 const DEG = Math.PI / 180;
+const backOut = x => 1 + 2.70158 * (x - 1) ** 3 + 1.70158 * (x - 1) ** 2;   // ease out with a little overshoot
+// closed outline points → a smooth path (Catmull-Rom → cubic Béziers)
+function smoothClosed(pts) {
+  const n = pts.length, pt = i => pts[(i + n) % n];
+  let d = `M${pts[0].map(f)}`;
+  for (let i = 0; i < n; i++) {
+    const [a, b, c, e] = [pt(i - 1), pt(i), pt(i + 1), pt(i + 2)];
+    d += `C${f(b[0] + (c[0] - a[0]) / 6)} ${f(b[1] + (c[1] - a[1]) / 6)} ${f(c[0] - (e[0] - b[0]) / 6)} ${f(c[1] - (e[1] - b[1]) / 6)} ${f(c[0])} ${f(c[1])}`;
+  }
+  return d + 'Z';
+}
 const hexCache = {};
 const rgb = h => hexCache[h] || (hexCache[h] = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
 function mixA(a, b, t) { t = clamp(t, 0, 1); const A = rgb(a), B = rgb(b); return [0, 1, 2].map(i => Math.round(lerp(A[i], B[i], t))); }
