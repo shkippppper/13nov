@@ -3,23 +3,25 @@
 function step(dt) {
   T += dt;
   const n = now(), rem = TARGET - n;
-  if (rem <= 0 && state === 'calm') startCollapse();
+  if (rem <= 0 && state === 'calm') startEnding();
   else if (rem > 0 && state !== 'calm') resetCalm();
-  const dT = state === 'calm' ? danger(n) : 1;
+  const dT = state === 'calm' ? danger(n) : 1 - SUN;   // after zero: full storm, easing off as the sun comes out
   D += (dT - D) * Math.min(1, dt * 1.5);
   updateEnv(dt);
-  if (state === 'calm') { updateCalm(dt); updateDrops(dt); } else updateCollapse(dt);
+  if (state === 'calm') { updateCalm(dt); updateDrops(dt); } else updateEnding(dt);
   updateFeatures(dt, rem);
   updateFx(dt);
   return rem;
 }
 
 D = danger(now());
-if (TARGET - now() <= 0) {
-  // Already past zero on load: fast-forward straight into the aftermath.
-  D = 1; startCollapse();
-  for (let i = 0; i < 720; i++) step(1 / 60);
-  P.length = 0; shakeMag = flashA = glitchT = ghostT = 0; nextGlitch = cT + 4;
+const sinceZero = (now() - TARGET) / 1000;
+if (sinceZero >= 0) {
+  // Already past zero on load: replay the ending up to now (quickly), or jump straight to the finished scene.
+  D = 1; startEnding();
+  if (sinceZero > END_SKIP) finishEnding();
+  else for (let i = 0, n = Math.round(sinceZero * 30); i < n; i++) step(1 / 30);
+  P.length = 0; shakeMag = flashA = glitchT = ghostT = 0;
 } else step(0);   // pose everything before the first paint
 updateCountdown(TARGET - now());
 

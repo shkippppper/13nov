@@ -3,6 +3,18 @@
 const starsG = $('stars'), STARS = [];
 for (let i = 0; i < 70; i++) STARS.push(el('circle', { cx: f(rand(0, 1920)), cy: f(rand(0, 640)), r: f(rand(0.7, 2.1)), opacity: f(rand(0.25, 1)) }, starsG));
 
+// the sun, for the day after the ending (rises behind the city on the right; hidden until then)
+const sunG = el('g', { opacity: 0 });
+$('moon').after(sunG);
+{
+  const gr = el('radialGradient', { id: 'sunGlow' }, $('scene').querySelector('defs'));
+  el('stop', { offset: 0, 'stop-color': '#fff1a8', 'stop-opacity': 0.75 }, gr); el('stop', { offset: 1, 'stop-color': '#fff1a8', 'stop-opacity': 0 }, gr);
+  el('circle', { r: 280, fill: 'url(#sunGlow)' }, sunG);
+}
+const sunRays = el('g', { fill: '#ffe07a', opacity: 0.85 }, sunG);
+for (let i = 0; i < 12; i++) el('path', { d: 'M-11 -112L0 -168L11 -112Z', transform: `rotate(${i * 30})` }, sunRays);
+el('circle', { r: 90, fill: '#ffd84d', stroke: '#ffb627', 'stroke-width': 6 }, sunG);
+
 const beamsG = $('beams');
 const BEAMS = [
   { x: 430, y: 905, a0: -18, amp: 26, sp: 0.21, ph: 0 },

@@ -37,13 +37,13 @@ function stepBody(b, dt, xmin, xmax, pile) {
 }
 
 // Junk falls out of the sky and piles up on both sides of him (the tower itself never loses anything).
-function spawnDrop() {
+function spawnDrop(xAt) {   // xAt(w) → where it lands (default: either side of him)
   const type = pick(DROP_TYPES);
   LIVE = false;
   const g = el('g', {}, dropsG), [w, h] = BUILD[type](g, {});
   LIVE = true;
   const left = Math.random() < 0.5;
-  const x = left ? rand(330 + w / 2, 800 - w / 2) : rand(1120 + w / 2, 1590 - w / 2);
+  const x = xAt ? xAt(w) : left ? rand(330 + w / 2, 800 - w / 2) : rand(1120 + w / 2, 1590 - w / 2);
   const y = -170 - h;
   const b = {
     el: g, type, x, y, a: rand(0, 360), w, h, hw: w / 2, hh: h / 2, vx: rand(-30, 30), vy: rand(250, 450), va: rand(-300, 300),
@@ -58,7 +58,7 @@ function onDropImpact(b, v) {
   if (b.elec) sparkBurst(b.x, b.y, 22);
   for (let i = 0; i < 10 * FX; i++) add({ k: 'crumb', x: b.x + rand(-b.hw, b.hw), y: b.y, vx: rand(-240, 240), vy: rand(-460, -150), c: pick(['#3b4757', '#9aa3b2', '#ffcf33', '#2c3340']), max: 2 });
   shake(Math.min(28, v / 65));
-  if (state !== 'calm') return;
+  if (state !== 'calm') { if (endDone) crewFlinch(); return; }   // after the ending, the crew flinches instead
   // he flinches
   dipV += 120; angV += rand(-25, 25); bendV += rand(-12, 12); sweatBurst(7);
 }

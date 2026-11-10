@@ -11,7 +11,7 @@ function poseTower() {
   plankEl.setAttribute('transform', `translate(${f(ox + 9 * sa)} ${f(PIV.y + curDy + tjy - 9 * ca)}) rotate(${ang.toFixed(3)})`);
   let px = ox + 18 * sa, py = PIV.y + curDy + tjy - 18 * ca;
   for (const r of ROWG) {
-    const th = ang + bendA * Math.pow(r.mid / TOWER_H, 1.4) + Math.sin(T * r.fq + r.ph) * (0.4 + D * 1.4);
+    const th = ang + bendA * Math.pow(r.mid / TOWER_H, 1.4) + Math.sin(T * r.fq + r.ph) * (0.4 + D * 1.4) * WOB;
     const t = th * DEG, ux = Math.sin(t), uy = -Math.cos(t);
     r.cx = px + ux * r.h / 2; r.cy = py + uy * r.h / 2; r.th = th;
     px = r.cx + ux * r.h / 2; py = r.cy + uy * r.h / 2;

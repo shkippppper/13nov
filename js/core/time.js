@@ -1,7 +1,7 @@
 'use strict';
 // ───────────────────────── time / preview controls
 // Hidden preview: keys 0–9 = danger level, z = 10 s before zero, r = real time, f = fullscreen,
-// c = cat now (if it's already here: a meow), t = the cat's ტრაკიიიი show, x = cxaduri peeks in.
+// c = wake the cat / make it talk, t = the cat's ტრაკიიიი show, x = cxaduri peeks in.
 // URL: ?d=0.7  |  ?t=15 (seconds before zero)  |  ?at=2026-11-10T12:00:00+04:00
 const qs = new URLSearchParams(location.search);
 let timeOffset = 0, dOverride = null;

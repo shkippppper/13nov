@@ -9,5 +9,5 @@ function featureKey(e) {
   for (const ft of FEATURES) { const fn = ft.keys?.[e.key] || ft.keys?.[e.code]; if (fn) { fn(e); return true; } }
   return false;
 }
-// the last 10 min and the collapse belong to the hero: features stay out of the way
-function heroTime(rem) { return rem < 600000 && rem > -60000; }
+// the last 10 min and the whole ending belong to the hero: features stay out of the way
+function heroTime(rem) { return rem < 600000 && (rem > 0 || !endDone); }

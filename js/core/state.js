@@ -8,5 +8,6 @@ let shakeMag = 0, flashA = 0, stormFlick = 0, glitchT = 0, ghostT = 0, nextGlitc
 let nextEvt = 5, nextDrop = 4, ledT = 0, winT = 0, slowT = 0, fanSpd = 1, impacts = 0;
 let stormX = 900, stormY = -40;
 let T = 0, D = 0;
+let WOB = 1, SUN = 0, endDone = false;   // tower sway on/off; 0 night … 1 sunny day (after the ending); the ending has played out
 const DROPS = [];
 const shake = m => { shakeMag = Math.max(shakeMag, m); };
