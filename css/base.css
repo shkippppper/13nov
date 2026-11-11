@@ -8,3 +8,16 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05050a;cursor:none}
 #sirenL{background:radial-gradient(ellipse at 0% 62%,rgba(255,25,25,.95),transparent 50%)}
 #sirenR{background:radial-gradient(ellipse at 100% 62%,rgba(40,100,255,.95),transparent 50%)}
 #flash{background:#e8ecff}
+
+/* controls list (p) */
+#help{position:fixed;right:16px;top:16px;z-index:10;display:none;box-sizing:border-box;
+      width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;padding:22px 26px;
+      background:rgba(10,12,22,.92);color:#e8ecf6;border:1px solid rgba(255,255,255,.18);border-radius:14px;
+      box-shadow:0 18px 50px rgba(0,0,0,.55);font:15px/1.45 system-ui,-apple-system,'Noto Sans Georgian',sans-serif}
+#help.on{display:block}
+#help h2{margin:0 0 12px;font-size:18px;font-weight:700;letter-spacing:.02em}
+#help dl{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0;align-items:baseline}
+#help dt{font:600 14px/1 ui-monospace,Menlo,Consolas,monospace;color:#10131c;background:#e8ecf6;border-radius:6px;padding:5px 8px;text-align:center;white-space:nowrap}
+#help dd{margin:0}
+#help p{margin:16px 0 0;font-size:13px;color:#aab3c8}
+#help code{font:13px ui-monospace,Menlo,Consolas,monospace;color:#e8ecf6}

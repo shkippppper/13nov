@@ -44,6 +44,7 @@ function updateFx(dt) {
       case 'spark': p.vy += 1300 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.y > GROUND + 10) dead = true; break;
       case 'sweat': case 'crumb': p.vy += 1500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.y > GROUND) dead = true; break;
       case 'heart': p.x += p.vx * dt + Math.sin(p.life * 6 + p.ph) * 0.8; p.y += p.vy * dt; break;
+      case 'zzz': p.x += p.vx * dt + Math.sin(p.life * 2.5 + p.ph) * 0.5; p.y += p.vy * dt; break;
     }
     if (dead) { P[i] = P[P.length - 1]; P.pop(); }
   }
@@ -95,6 +96,13 @@ function drawFx() {
     if (p.k === 'sweat') { ctx.globalAlpha = Math.min(1, (p.max - p.life) * 3); drawDrop(p.x, p.y, Math.atan2(p.vy, p.vx)); }
     else if (p.k === 'crumb') { ctx.globalAlpha = 1; ctx.fillStyle = p.c; ctx.fillRect(p.x - 3, p.y - 3, 6, 6); }
     else if (p.k === 'heart') { ctx.globalAlpha = Math.min(1, (p.max - p.life) * 2); ctx.fillStyle = '#ff4f8b'; drawHeart(p.x, p.y, p.r * Math.min(1, 0.4 + p.life * 3)); }
+    else if (p.k === 'zzz') {   // a sleeping "Z" that drifts up, grows and fades
+      const t = p.life / p.max;
+      ctx.globalAlpha = Math.min(1, p.life * 3) * (1 - t);
+      ctx.font = `900 ${Math.round(p.r * (0.6 + t * 0.8))}px Orbitron, system-ui, sans-serif`;
+      ctx.lineWidth = 5; ctx.strokeStyle = '#1b2033'; ctx.fillStyle = '#e9efff';
+      ctx.strokeText('Z', p.x, p.y); ctx.fillText('Z', p.x, p.y);
+    }
   }
   ctx.globalCompositeOperation = 'lighter';
   for (const p of P) {
